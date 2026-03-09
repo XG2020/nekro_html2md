@@ -3,10 +3,6 @@
 ## 概述
 访问指定网页链接，清洗 HTML 并可选提取正文，转换为 Markdown 文本直接返回给大模型查看。内置多策略重试与反爬应对，失败时以 Markdown 形式返回可读提示，不中断会话。
 
-## 安装与位置
-- 插件目录：`plugins/workdir/nekro_html2md/`
-- 主文件：[plugin.py](./plugin.py)
-- 导出入口：[__init__.py](./__init__.py)
 
 ## 提供的方法
 - 方法名：`fetch_html_to_markdown`
