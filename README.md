@@ -34,7 +34,7 @@
 ```
 
 ## 参数
-- `url`（必填）：目标网页链接，需为 http/https
+- `url`（必填）：目标网页链接，需为 http/https；会自动去除首尾空白及包裹引号/反引号（如 `` `https://example.com` ``）
 - `keep_links`（默认 true）：保留超链接
 - `remove_scripts`（默认 true）：移除 `script`/`noscript`
 - `remove_styles`（默认 true）：移除 `style`/`link`
@@ -51,6 +51,12 @@
 - `delay_ms_min`/`delay_ms_max`（默认 200/1200）：随机延迟范围
 - `timeout`（默认 20）：单次请求超时时间秒
 - `use_cloudscraper`（默认 true）：是否使用 Cloudscraper 处理 JS 挑战
+
+## 乱码处理与编码策略
+- 优先按响应声明编码解码（忽略常见误判 `ISO-8859-1` 默认值）
+- 其次使用探测编码（`apparent_encoding`）与常见中文编码兜底（`utf-8`/`gb18030`/`big5`）
+- 再次回退 `BeautifulSoup.UnicodeDammit` 自动识别 HTML 编码
+- 最终仍失败时，使用 `utf-8(ignore)` 保证流程不中断
 
 ## 反爬应对策略
 - 多策略顺序：
@@ -77,9 +83,13 @@
 )
 ```
 
+### 乱码场景示例
+```
+/exec fetch_html_to_markdown(url=" `https://dev.qweather.com/docs/resource/indices-info/` ")
+```
+
 ## 注意事项
 - 请遵守网站服务条款与 robots.txt，避免过度抓取与绕过强认证
 - 对强 JS 站点优先尝试 `use_cloudscraper=true`；不稳定时切换直连重试
 - 对新闻/文章页启用 `use_readability=true` 可显著提升可读性
 - 如站点拒绝代理，插件会自动切换直连；也可直接传入默认参数进行直连
-
