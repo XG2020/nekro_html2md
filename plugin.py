@@ -42,6 +42,46 @@ def _is_url(s: str) -> bool:
     return s.startswith("http://") or s.startswith("https://")
 
 
+def _normalize_url(raw: Any) -> str:
+    return str(raw or "").strip().strip("`'\"").strip()
+
+
+def _decode_response_text(resp: Any, bs4: Any) -> str:
+    raw = getattr(resp, "content", b"") or b""
+    if isinstance(raw, str):
+        return raw
+
+    candidates: list[str] = []
+    resp_encoding = getattr(resp, "encoding", None)
+    if isinstance(resp_encoding, str) and resp_encoding:
+        # requests may default to ISO-8859-1 when no charset is provided.
+        if resp_encoding.lower() != "iso-8859-1":
+            candidates.append(resp_encoding)
+    apparent = getattr(resp, "apparent_encoding", None)
+    if isinstance(apparent, str) and apparent:
+        candidates.append(apparent)
+    candidates.extend(["utf-8", "gb18030", "big5"])
+
+    seen: set[str] = set()
+    for enc in candidates:
+        low = enc.lower()
+        if low in seen:
+            continue
+        seen.add(low)
+        try:
+            return raw.decode(enc)
+        except Exception:
+            continue
+
+    try:
+        dammit = bs4.UnicodeDammit(raw, is_html=True)
+        if dammit and dammit.unicode_markup:
+            return dammit.unicode_markup
+    except Exception:
+        pass
+    return raw.decode("utf-8", errors="ignore")
+
+
 def _get_proxy() -> Optional[str]:
     try:
         proxy = getattr(core.config, "DEFAULT_PROXY", None)
@@ -72,7 +112,7 @@ async def fetch_html_to_markdown(
     except Exception:
         from nekro_agent.api.plugin import dynamic_import_pkg  # type: ignore
 
-    url: str = kwargs.get("url") or (args[0] if args else "")
+    url: str = _normalize_url(kwargs.get("url") or (args[0] if args else ""))
     if not url or not _is_url(url):
         raise ValueError("请提供有效的 http/https 网页链接参数：url")
 
@@ -143,7 +183,7 @@ async def fetch_html_to_markdown(
                 if code in (429, 403):
                     raise RuntimeError(f"HTTP {code}")
                 resp.raise_for_status()
-                html = resp.text or resp.content.decode(errors="ignore")
+                html = _decode_response_text(resp, bs4)
                 if not html or "captcha" in html.lower():
                     raise RuntimeError("captcha")
                 break
