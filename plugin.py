@@ -27,7 +27,7 @@ class Html2MdConfig(ConfigBase):
     max_length: int = Field(default=0, title="返回内容最大长度（0为不限制）")
     user_agent: str = Field(default="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36", title="User-Agent")
     accept_language: str = Field(default="zh-CN,zh;q=0.9,en;q=0.8", title="Accept-Language")
-    referer: str | None = Field(default=None, title="Referer")
+    referrer: str = Field(default="", title="Referer")
     retries: int = Field(default=2, title="重试次数")
     backoff_ms: int = Field(default=500, title="退避毫秒")
     delay_ms_min: int = Field(default=200, title="最小随机延迟毫秒")
@@ -124,7 +124,10 @@ async def fetch_html_to_markdown(
     collapse_ws: bool = kwargs.get("collapse_whitespace", cfg.collapse_whitespace)
     ua: str = kwargs.get("user_agent", cfg.user_agent)
     al: str = kwargs.get("accept_language", cfg.accept_language)
-    ref: Optional[str] = kwargs.get("referer", cfg.referer)
+    # 兼容旧配置键 referer 与调用参数 referer/referrer。
+    cfg_ref = (getattr(cfg, "referrer", "") or getattr(cfg, "referer", "")).strip()
+    ref_raw = kwargs.get("referer", kwargs.get("referrer", cfg_ref))
+    ref: Optional[str] = str(ref_raw).strip() if ref_raw else None
     retries: int = max(0, int(kwargs.get("retries", cfg.retries)))
     backoff_ms: int = max(0, int(kwargs.get("backoff_ms", cfg.backoff_ms)))
     delay_min: int = max(0, int(kwargs.get("delay_ms_min", cfg.delay_ms_min)))
